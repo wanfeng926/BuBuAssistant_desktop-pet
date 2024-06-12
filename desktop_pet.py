@@ -134,12 +134,16 @@ class BuBuAssistant(QWidget):
         self.fontDB = QFontDatabase()
         self.fontID = self.fontDB.addApplicationFont("./font/LanaPixel.ttf")
         self.fontFamily = self.fontDB.applicationFontFamilies(self.fontID)[0]
-        with open('./files/condition.json','r',encoding='utf-8') as f:
-            data = f.read()
-            data = json.loads(data)
-            self.intimacy = data.get('Intimacy')
-            self.health = data.get('Health')
-            self.mood = data.get('Mood')
+        try:
+            with open('./files/condition.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.intimacy = data.get('Intimacy', 50)
+                self.health = data.get('Health', 50)
+                self.mood = data.get('Mood', 50)
+        except FileNotFoundError:
+            self.intimacy = 50
+            self.health = 50
+            self.mood = 50
 
     def happybuff(self):
         self.play_times = 1
