@@ -522,11 +522,13 @@ class ChatWindow(QWidget):
         self.textEdit.clear()
         self.textEdit.setFocus()
         self.chatSum += 1
-        self.chatMessages.append({"role": "Human","content": self.message})
+        self.chatMessages.append({"role": "Human", "content": self.message})
         Bubble.set_return(self, self.avatar2, self.message, Qt.RightToLeft)   # 调用new_widget.py中方法生成右气泡
         QApplication.processEvents()
-        thread = threading.Thread(target=self.AiTalk)
-        thread.start() 
+
+        self.thread = AiThread(self.chatMessages)
+        self.thread.signal_result.connect(self.update_ui)
+        self.thread.start()
 
     def set_bubble(self):
         font = QFont()
@@ -570,6 +572,33 @@ class ChatWindow(QWidget):
         self.answer = json.loads(data.decode("utf-8")).get('data').get('content')
         self.signal_result.emit(self.answer)
 
+class AiThread(QThread):
+    signal_result = pyqtSignal(str)
+
+    def __init__(self, chatMessages):
+        super().__init__()
+        self.chatMessages = chatMessages
+
+    def run(self):
+        conn = http.client.HTTPSConnection("api.atomecho.cn")
+        payload = json.dumps({
+            "param": {
+                "model": "3bf4d1af-38ce-4e94-939e-b1002b0b8455",
+                "stream": False
+            },
+            "messages": self.chatMessages
+        })
+        headers = {
+            'S-Auth-Secret': 'sk-014d100316a1063cde1d16f1b30bc6ac',  # 替换成自己的Secret
+            'S-Auth-ApiKey': 'a88326d1eba6a568d585e47f9f5e7ba8',  # 替换成自己的ApiKey
+            'Content-Type': 'application/json'
+        }
+        conn.request("POST", "/open/text-chat/v1", payload, headers)
+        res = conn.getresponse()
+        data = res.read()
+
+        answer = json.loads(data.decode("utf-8")).get('data').get('content')
+        self.signal_result.emit(answer)
 
 class Bubble:
     def set_return(self,ico,text,dir):  #头像，文本，方向
